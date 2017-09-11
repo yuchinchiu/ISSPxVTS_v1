@@ -4,6 +4,6 @@ data/v1_csv
 analysis_py/*pkl
 analysis_py/*pyc
 analysis_py/.ipynb_checkpoints
-analysis/__pycache__
+analysis_py/__pycache__
 
 
