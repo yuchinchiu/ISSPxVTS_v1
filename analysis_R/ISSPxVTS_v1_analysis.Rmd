@@ -1,0 +1,25 @@
+---
+title: "ISSPxVTS_v1 analysis"
+author: "Yu-Chin Chiu"
+date: "September 8, 2017"
+output: md_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', include = TRUE, warning = FALSE, message = FALSE)
+
+```
+
+
+```{r}
+
+rm(list=ls())
+library('tidyverse')
+currentDir <- getwd()
+dataDir <- "C:/Users/yc180/Documents/YCCProjects/ISSPxVTS_v1/data/v1_batches"
+setwd(dataDir)
+fileList <- list.files(path = dataDir, pattern = '*.log')
+expColNames <- c("")
+
+```
+
