@@ -5,5 +5,5 @@ analysis_py/*pkl
 analysis_py/*pyc
 analysis_py/.ipynb_checkpoints
 analysis_py/__pycache__
-
-
+*.csv
+.Rproj.user
