@@ -6,7 +6,7 @@ output: md_document
 ---
 
 ```{r knitSetup}
-knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', include = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', echo = FALSE, warning = FALSE, message = FALSE)
 
 ```
 
@@ -15,19 +15,21 @@ knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', include = F
 ```{r setup}
 rm(list=ls())
 library('tidyverse')
+library('ez')
+
 currentDir <- getwd()
 dataDir <- "C:/Users/yc180/Documents/YCCProjects/ISSPxVTS_v1/"
 setwd(dataDir)
 gpData=read_csv('validgpData.csv',col_names=TRUE)
 setwd(currentDir)
 source("getWSSE.R")
+
 ```
 
 #### Set up some formating for the plots
-Set up some good format, here i am using apatheme with white background for figure 1a, with black axis lines, no grids.
-Default theme is good for visual comparison (theme_gray() with white grid lines, gray background), used for others here.
+Set up some good format, here i am using apatheme with white background, with black axis lines, no grids.
 
-```{r fig apa-format, echo = FALSE}
+```{r fig apa-format}
 apatheme = theme_bw()+
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
@@ -40,7 +42,7 @@ dodge = position_dodge(width=0.9)
 #### Turn a bunch of codings into categorical factors
 
 ```{r analysis_prep}
-catVblList <- c("bkType", "task", "swProb", "trialType", "runId")
+catVblList <- c("bkType", "task", "swProb", "trialType", "runId", "sbjId")
 idx <- match(catVblList, colnames(gpData))
 for (c in idx[!is.na(idx)]){
   gpData[[c]] <- factor(gpData[[c]], ordered = TRUE)
@@ -51,7 +53,7 @@ NrS <- length(unique(gpData$sbjId))
 
 ```
 
-#### Summarize individual data
+#### Summarizing individual data
 
 ```{r within-Subject analysis}
 
@@ -92,7 +94,7 @@ for (S in unique(gpData$sbjId)) {
 
 ```
 
-#### Calculate the within-subject SEM using "getWSSE"" 
+#### Calculate the within-subject SEM using "getWSSE"
 
 ```{r ISSP analysis}
 
@@ -114,7 +116,7 @@ ISSP <- gpCondM1 %>%
 
 ```
 
-#### Plot the ISSP (RT) effect by block type (cued, choice) 
+#### Plot: ISSP(swProb x trialtype) effect in **RT** by block type (cued vs. choice) 
 
 ```{r ISSP_RT_plot}
 
@@ -128,7 +130,33 @@ ISSP %>%
 
 ```
 
-#### Plot the ISSP (ACC) effect by block type (cued, choice) 
+#### 3-way ANOVA: RT ~ 2 bkType x 2 swProb x 2 trialType
+```{r}
+z = ezANOVA(data = gpCondM1
+            , dv = meanRT
+            , wid = sbjId
+            , within = .(bkType, swProb, trialType)
+            , within_full = .(bkType, swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+
+#### 2-way ANOVA: RT ~ 2 swProb x 2 trialType [cued condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
+            , dv = meanRT
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+
+#### Plot: ISSP(swProb x trialtype) effect in **accuracy** by block type (cued vs. choice) 
 
 ```{r ISSP_ACC_plot}
 ISSP %>%
@@ -141,7 +169,33 @@ ISSP %>%
 
 ```
 
-#### Voluntary task-switching rate (by run)
+#### 3-way ANOVA: Accuracy ~ 2 bkType x 2 swProb x 2 trialType
+```{r}
+z = ezANOVA(data = gpCondM1
+            , dv = meanACC
+            , wid = sbjId
+            , within = .(bkType, swProb, trialType)
+            , within_full = .(bkType, swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+
+#### 2-way ANOVA: Accuracy ~ 2 swProb x 2 trialType [cued condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
+            , dv = meanACC
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+
+#### Plot: Voluntary task-switching rate: 2 run x 2 swProb
 ```{r VTS_rate, fig.width=4.5, fig.height=4}
 df <- gpCondM3 
 colnames(df)[colnames(df)=="swRate"] <- "M"
@@ -163,3 +217,23 @@ RunXSwRate  %>%
 
 ```
 
+#### ANOVA: switch rate ~ 2 run x 2 swProb
+```{r}
+z = ezANOVA(data = gpCondM3
+            , dv = swRate
+            , wid = sbjId
+            , within = .(runId, swProb)
+            , within_full = .(runId, swProb)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+y1 <- gpCondM3 %>% filter(runId=="9") %>% filter(swProb=="sw25%") %>% select(swRate)
+y2 <- gpCondM3 %>% filter(runId=="9") %>% filter(swProb=="sw75%") %>% select(swRate)
+
+paired_t_pval <-gpCondM3 %>% filter(runId=="9") %>% summarise(pval_ttest = t.test(swRate~swProb, data=., paired = TRUE)$p.value)
+
+print(paired_t_pval)
+
+
+```
