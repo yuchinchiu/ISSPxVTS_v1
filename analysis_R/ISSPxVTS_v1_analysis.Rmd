@@ -5,14 +5,14 @@ date: "September 8, 2017"
 output: md_document
 ---
 
-```{r, include=FALSE}
-knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', include = TRUE, warning = FALSE, message = FALSE)
+```{r knitSetup}
+knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', include = FALSE, warning = FALSE, message = FALSE)
 
 ```
 
 #### First, Set up the environment and load the data: validgpData.csv [this file came from python scripts - cleaning and preprocessing]
 
-```{r setup, include=FALSE}
+```{r setup}
 rm(list=ls())
 library('tidyverse')
 currentDir <- getwd()
@@ -141,7 +141,7 @@ ISSP %>%
 
 ```
 
-
+#### Voluntary task-switching rate (by run)
 ```{r VTS_rate, fig.width=4.5, fig.height=4}
 df <- gpCondM3 
 colnames(df)[colnames(df)=="swRate"] <- "M"
