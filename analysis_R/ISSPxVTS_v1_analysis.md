@@ -1,0 +1,115 @@
+#### First, Set up the environment and load the data: validgpData.csv \[this file came from python scripts - cleaning and preprocessing\]
+
+#### Set up some formating for the plots
+
+Set up some good format, here i am using apatheme with white background
+for figure 1a, with black axis lines, no grids. Default theme is good
+for visual comparison (theme\_gray() with white grid lines, gray
+background), used for others here.
+
+#### Turn a bunch of codings into categorical factors
+
+    catVblList <- c("bkType", "task", "swProb", "trialType", "runId")
+    idx <- match(catVblList, colnames(gpData))
+    for (c in idx[!is.na(idx)]){
+      gpData[[c]] <- factor(gpData[[c]], ordered = TRUE)
+    }
+    gpData$bkType <- factor(gpData$bkType, levels = c("cued", "choice"), ordered=TRUE)
+    gpData[gpData$sbjACC==0, "sbjRT"] <- NA
+    NrS <- length(unique(gpData$sbjId))
+
+#### Summarize individual data
+
+    gpCondM1 <- tibble()
+    gpCondM2 <- tibble()
+    gpCondM3 <- tibble()
+
+    for (S in unique(gpData$sbjId)) {
+      mydata <-  gpData %>% filter(sbjId==S) 
+      
+      # 2 bkType (cued, choice) x 2 swProb (25%, 75%) x 2 trial type (switch, repeat)
+      condM <- mydata %>%
+        group_by(bkType, swProb, trialType) %>% 
+        summarise(meanRT = mean(sbjRT, na.rm = TRUE), meanACC = mean(sbjACC))
+      condM <- bind_cols(tibble(sbjId = rep(S,dim(condM)[1])), condM)
+      ISSP <- condM[2,"meanRT"] - condM[1,"meanRT"] - (condM[4,"meanRT"]-condM[3,"meanRT"])
+      ISSP_choice <- condM[6,"meanRT"] - condM[5,"meanRT"] - (condM[8,"meanRT"]-condM[7,"meanRT"])
+      gpCondM1 <- bind_rows(gpCondM1, condM)
+
+      
+      # choice: switch Rate as a function of swProb
+      condM2 <- mydata %>% 
+        filter(bkType=="choice") %>%
+        group_by(swProb) %>%
+        summarise(swRate = mean(trialType2, na.rm = TRUE))
+      condM2 <- bind_cols(tibble(sbjId = rep(S,dim(condM2)[1])), condM2)
+      gpCondM2 <- bind_rows(gpCondM2, condM2)
+      
+      # choice: 2 runs 
+      condM3 <- mydata %>% 
+        filter(bkType=="choice") %>%
+        group_by(runId, swProb) %>%
+        summarise(swRate = mean(trialType2, na.rm = TRUE))
+      condM3 <- bind_cols(tibble(sbjId = rep(S,dim(condM3)[1])), condM3)
+      gpCondM3 <- bind_rows(gpCondM3, condM3)
+
+    }
+
+#### Calculate the within-subject SEM using "getWSSE""
+
+    df <- gpCondM1 %>% select(-meanACC)
+    colnames(df)[colnames(df)=="meanRT"] <- "M"
+    LnMSE_rt <- getWSSE(df)
+
+
+    df <- gpCondM1 %>% select(-meanRT)
+    colnames(df)[colnames(df)=="meanACC"] <- "M"
+    LnMSE_acc <- getWSSE(df)
+
+
+    ISSP <- gpCondM1 %>%
+      group_by(bkType, swProb, trialType) %>% 
+      summarise(gpmeanRT = mean(meanRT), SE_rt = LnMSE_rt , gpmeanACC = mean(meanACC)*100, SE_acc = LnMSE_acc*100) 
+
+#### Plot the ISSP (RT) effect by block type (cued, choice)
+
+    ISSP %>%
+      ggplot(aes(x=swProb, y = gpmeanRT, fill = trialType)) + 
+      geom_col(position = dodge) + 
+      geom_errorbar(aes(ymax = gpmeanRT + (1*SE_rt), ymin =gpmeanRT -(1*SE_rt)), position = dodge, width=.25) + facet_grid(.~bkType) + 
+      ylab("mean RT (correct trials)") + 
+      coord_cartesian(ylim = c(600,900)) +
+      scale_fill_grey()
+
+![](figure/ISSP_RT_plot-1.png)
+
+#### Plot the ISSP (ACC) effect by block type (cued, choice)
+
+    ISSP %>%
+      ggplot(aes(x=swProb, y = gpmeanACC, fill = trialType)) + 
+      geom_col(position = dodge) + 
+      geom_errorbar(aes(ymax = gpmeanACC + (1*SE_acc), ymin =gpmeanACC -(1*SE_acc)), position = dodge, width=.25) + facet_grid(.~bkType) + 
+      ylab("mean ACC") + 
+      coord_cartesian(ylim = c(80,100)) +
+      scale_fill_grey()
+
+![](figure/ISSP_ACC_plot-1.png)
+
+    df <- gpCondM3 
+    colnames(df)[colnames(df)=="swRate"] <- "M"
+    LnMSE_swRate <- getWSSE(df)
+
+    RunXSwRate <- gpCondM3 %>%
+      group_by(runId, swProb) %>% 
+      summarise(gpmeanSwRate = mean(swRate), SE_rate = LnMSE_swRate) 
+
+    RunXSwRate  %>%
+      ggplot(aes(x=runId, y = gpmeanSwRate*100, fill = swProb)) + 
+      geom_col(position = dodge) + 
+      geom_errorbar(aes(ymax = gpmeanSwRate*100 + (1*SE_rate*100), ymin =gpmeanSwRate*100 -(1*SE_rate*100)), 
+                    position = dodge, width=.25) + 
+      ylab("mean Switch Rate(%)") + 
+      coord_cartesian(ylim = c(30,50)) +
+      scale_fill_grey()
+
+![](figure/VTS_rate-1.png)

@@ -39,7 +39,7 @@ dodge = position_dodge(width=0.9)
 
 #### Turn a bunch of codings into categorical factors
 
-```{r}
+```{r analysis_prep}
 catVblList <- c("bkType", "task", "swProb", "trialType", "runId")
 idx <- match(catVblList, colnames(gpData))
 for (c in idx[!is.na(idx)]){
@@ -53,7 +53,7 @@ NrS <- length(unique(gpData$sbjId))
 
 #### Summarize individual data
 
-```{r}
+```{r within-Subject analysis}
 
 gpCondM1 <- tibble()
 gpCondM2 <- tibble()
@@ -94,7 +94,7 @@ for (S in unique(gpData$sbjId)) {
 
 #### Calculate the within-subject SEM using "getWSSE"" 
 
-```{r}
+```{r ISSP analysis}
 
 df <- gpCondM1 %>% select(-meanACC)
 colnames(df)[colnames(df)=="meanRT"] <- "M"
@@ -116,7 +116,7 @@ ISSP <- gpCondM1 %>%
 
 #### Plot the ISSP (RT) effect by block type (cued, choice) 
 
-```{r}
+```{r ISSP_RT_plot}
 
 ISSP %>%
   ggplot(aes(x=swProb, y = gpmeanRT, fill = trialType)) + 
@@ -130,19 +130,19 @@ ISSP %>%
 
 #### Plot the ISSP (ACC) effect by block type (cued, choice) 
 
-```{r}
+```{r ISSP_ACC_plot}
 ISSP %>%
   ggplot(aes(x=swProb, y = gpmeanACC, fill = trialType)) + 
   geom_col(position = dodge) + 
   geom_errorbar(aes(ymax = gpmeanACC + (1*SE_acc), ymin =gpmeanACC -(1*SE_acc)), position = dodge, width=.25) + facet_grid(.~bkType) + 
-  ylab("mean RT (correct trials)") + 
+  ylab("mean ACC") + 
   coord_cartesian(ylim = c(80,100)) +
   scale_fill_grey()
 
 ```
 
 
-```{r, fig.width=4.5, fig.height=4}
+```{r VTS_rate, fig.width=4.5, fig.height=4}
 df <- gpCondM3 
 colnames(df)[colnames(df)=="swRate"] <- "M"
 LnMSE_swRate <- getWSSE(df)
