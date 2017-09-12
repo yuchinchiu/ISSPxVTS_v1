@@ -113,5 +113,10 @@ gpData['trialType']= pd.Categorical(gpData.trialType, categories=['repeat','swit
 # output DataFrame
 os.chdir(workingDir)  # scripts directory
 gpData.to_pickle('gpData.pkl')
-gpData.to_pickle('gpSbjInfo.pkl')
+gpSbjInfo.to_pickle('gpSbjInfo.pkl')
+
+gpData.to_csv('gpData.csv',encoding='utf-8', index=False)
+gpSbjInfo.to_csv('gpSbjInfo.csv',encoding='utf-8', index=False)
+
+
 print(SCNT)

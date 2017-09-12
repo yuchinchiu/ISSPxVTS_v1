@@ -15,16 +15,18 @@ from copy import copy
 
 workingDir = os.path.dirname(os.path.realpath(__file__))
 os.chdir(workingDir)
+
 gpData = pd.read_pickle('gpData.pkl')
 
-gpResult =pd.DataFrame(np.empty((0,0),dtype=int))
-gpResult2=pd.DataFrame(np.empty((0,0),dtype=int))
-gpResult3=pd.DataFrame(np.empty((0,0),dtype=int))
+gpResult  = pd.DataFrame(np.empty((0,0),dtype=int))
+gpResult2 = pd.DataFrame(np.empty((0,0),dtype=int))
+gpResult3 = pd.DataFrame(np.empty((0,0),dtype=int))
+
+gpData_valid = pd.DataFrame(np.empty((0,0),dtype=int))
 
 #gpRT=pd.DataFrame(np.empty((0,1),dtype=int))
 
-
-overallACC=pd.DataFrame(np.unique(gpData.sbjId),dtype=int,columns=['sbjId'])
+overallACC = pd.DataFrame(np.unique(gpData.sbjId),dtype=int,columns=['sbjId'])
 overallACC['meanACC']=np.nan
 excludeSbj=[]
 goodSbj=[]
@@ -49,7 +51,9 @@ ISSP = pd.DataFrame(np.unique(gpData.sbjId),dtype=int,columns=['sbjId'])
 
 for S in goodSbj:
     D = gpData.loc[gpData.sbjId==S]
-    
+    #
+    gpData_valid = pd.concat([gpData_valid, D], axis=0)
+    #
     sbjMeans = pd.DataFrame(D.groupby(['bkType','swProb','trialType']).sbjACC.mean()*100)
     sbjMeans['sbjRT']=pd.DataFrame(D.loc[D.sbjACC==1,:].groupby(['bkType','swProb','trialType']).sbjRT.mean())
     sbjMeans['sbjId']=S
@@ -76,9 +80,12 @@ for S in goodSbj:
     ISSP.loc[ISSP[ISSP.sbjId==S].index, 'sw25%_swRate'] = sbjMeans2.trialType2[0]
     ISSP.loc[ISSP[ISSP.sbjId==S].index, 'sw75%_swRate'] = sbjMeans2.trialType2[1]
 
+# MUST INCLUDE RESET_INDEX, OTHERWISE THE BELOW exclude subject chuck will be order
+
 gpResult.reset_index(inplace=True)
 gpResult2.reset_index(inplace=True)
 gpResult3.reset_index(inplace=True)
+gpData_valid.reset_index(inplace=True)
 
 #%%
 
@@ -86,7 +93,10 @@ for S in excludeSbj:
     gpResult.drop(gpResult[gpResult.sbjId==S].index, axis=0, inplace=True)
     gpResult2.drop(gpResult2[gpResult2.sbjId==S].index, axis=0, inplace=True)
     gpResult3.drop(gpResult3[gpResult3.sbjId==S].index, axis=0, inplace=True)
-    ISSP.drop(ISSP[ISSP.sbjId==S].index,axis=0, inplace=True)
+    ISSP.drop(ISSP[ISSP.sbjId==S].index,axis=0, inplace=True)    
+    gpData_valid.drop(gpData_valid[gpData_valid.sbjId==S].index, axis=0, inplace=True)
+    
+    
     
 gpResult.reset_index(inplace=True)
 gpResult2.reset_index(inplace=True)
@@ -130,3 +140,5 @@ tt2 = stats.ttest_rel(a,b)
 
 
 print(totalSCNT)
+
+gpData_valid.to_csv('validgpData.csv',encoding='utf-8', index=False)
