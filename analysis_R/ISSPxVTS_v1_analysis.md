@@ -13,9 +13,11 @@ with black axis lines, no grids.
 
 #### Then, calculate the group mean and within-subject SEM using "getWSSE" (a function I wrote)
 
+    ## [1] "Group means:"
+
     ## [1] "cued: swCost:75% = 92.03 ms"
 
-    ## [1] "cude: swCost:25% = 109.79 ms"
+    ## [1] "cued: swCost:25% = 109.79 ms"
 
     ## [1] "choice: swCost:75% = 48.07 ms"
 
@@ -25,8 +27,9 @@ with black axis lines, no grids.
 
 #### Figure 1: ISSP(swProb x trialtype) effect in **RT** by block type (cued vs. choice)
 
-![](figure/Figure1-1.png) \#\#\#\# 3-way ANOVA: RT ~ 2 bkType x 2 swProb
-x 2 trialType
+![](figure/Figure1-1.png)
+
+#### 3-way ANOVA: RT ~ 2 bkType x 2 swProb x 2 trialType
 
     ## $ANOVA
     ##                    Effect DFn DFd          SSn        SSd           F
@@ -78,8 +81,9 @@ x 2 trialType
 
 #### Figure 2: ISSP(swProb x trialtype) effect in **accuracy** by block type (cued vs. choice)
 
-![](figure/Figure2-1.png) \#\#\#\# 3-way ANOVA: Accuracy ~ 2 bkType x 2
-swProb x 2 trialType
+![](figure/Figure2-1.png)
+
+#### 3-way ANOVA: Accuracy ~ 2 bkType x 2 swProb x 2 trialType
 
     ## $ANOVA
     ##                    Effect DFn DFd          SSn        SSd            F

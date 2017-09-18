@@ -108,9 +108,10 @@ ISSP <- gpCondM1 %>%
 swCost_75 = ISSP[4,"gpmeanRT"]-ISSP[3,"gpmeanRT"]
 swCost_25 = ISSP[2,"gpmeanRT"]-ISSP[1,"gpmeanRT"]
 
-print(paste("cued: swCost:75% =", sprintf("%.2f", swCost_75), "ms"))
-print(paste("cude: swCost:25% =", sprintf("%.2f", swCost_25), "ms"))
+print('Group means:')
 
+print(paste("cued: swCost:75% =", sprintf("%.2f", swCost_75), "ms"))
+print(paste("cued: swCost:25% =", sprintf("%.2f", swCost_25), "ms"))
 
 VTSswCost_75 = ISSP[8,"gpmeanRT"]-ISSP[7,"gpmeanRT"]
 VTSswCost_25 = ISSP[6,"gpmeanRT"]-ISSP[5,"gpmeanRT"]
@@ -133,7 +134,9 @@ ISSP %>%
   scale_fill_grey()
 
 ```
+
 #### 3-way ANOVA: RT ~ 2 bkType x 2 swProb x 2 trialType
+
 ```{r}
 z = ezANOVA(data = gpCondM1
             , dv = meanRT
@@ -180,6 +183,7 @@ ISSP %>%
   scale_fill_grey()
 
 ```
+
 #### 3-way ANOVA: Accuracy ~ 2 bkType x 2 swProb x 2 trialType
 ```{r}
 z = ezANOVA(data = gpCondM1
