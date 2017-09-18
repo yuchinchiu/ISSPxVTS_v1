@@ -10,7 +10,8 @@ knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', echo = FALS
 
 ```
 
-#### First, Set up the environment and load the data: validgpData.csv [this file came from python scripts - cleaning and preprocessing]
+#### First, Set up the environment and load the data: validgpData.csv 
+This file came from python scripts - cleaning and preprocessing
 
 ```{r setup}
 rm(list=ls())
@@ -25,10 +26,8 @@ setwd(currentDir)
 source("getWSSE.R")
 
 ```
-
 #### Set up some formating for the plots
-Set up some good format, here i am using apatheme with white background, with black axis lines, no grids.
-
+Set up some good format, here I am using apatheme with white background, with black axis lines, no grids.
 ```{r fig apa-format}
 apatheme = theme_bw()+
   theme(panel.grid.major = element_blank(),
@@ -38,10 +37,8 @@ apatheme = theme_bw()+
 dodge = position_dodge(width=0.9)
 ```
 
-
-#### Turn a bunch of codings into categorical factors
-
 ```{r analysis_prep}
+# Turn a bunch of codings into categorical factors
 catVblList <- c("bkType", "task", "swProb", "trialType", "runId", "sbjId")
 idx <- match(catVblList, colnames(gpData))
 for (c in idx[!is.na(idx)]){
@@ -52,11 +49,9 @@ gpData[gpData$sbjACC==0, "sbjRT"] <- NA
 NrS <- length(unique(gpData$sbjId))
 
 ```
-
-#### Summarizing individual data
+#### First summarize individual subject's data
 
 ```{r within-Subject analysis}
-
 gpCondM1 <- tibble()
 gpCondM2 <- tibble()
 gpCondM3 <- tibble()
@@ -93,9 +88,7 @@ for (S in unique(gpData$sbjId)) {
 }
 
 ```
-
-#### Calculate the within-subject SEM using "getWSSE"
-
+#### Then, calculate the group mean and within-subject SEM using "getWSSE" (a function I wrote)
 ```{r ISSP analysis}
 
 df <- gpCondM1 %>% select(-meanACC)
@@ -112,13 +105,24 @@ ISSP <- gpCondM1 %>%
   group_by(bkType, swProb, trialType) %>% 
   summarise(gpmeanRT = mean(meanRT), SE_rt = LnMSE_rt , gpmeanACC = mean(meanACC)*100, SE_acc = LnMSE_acc*100) 
 
+swCost_75 = ISSP[4,"gpmeanRT"]-ISSP[3,"gpmeanRT"]
+swCost_25 = ISSP[2,"gpmeanRT"]-ISSP[1,"gpmeanRT"]
+
+print(paste("cued: swCost:75% =", sprintf("%.2f", swCost_75), "ms"))
+print(paste("cude: swCost:25% =", sprintf("%.2f", swCost_25), "ms"))
+
+
+VTSswCost_75 = ISSP[8,"gpmeanRT"]-ISSP[7,"gpmeanRT"]
+VTSswCost_25 = ISSP[6,"gpmeanRT"]-ISSP[5,"gpmeanRT"]
+
+print(paste("choice: swCost:75% =", sprintf("%.2f", VTSswCost_75), "ms"))
+print(paste("choice: swCost:25% =", sprintf("%.2f", VTSswCost_25), "ms"))
 
 
 ```
-
-#### Plot: ISSP(swProb x trialtype) effect in **RT** by block type (cued vs. choice) 
-
-```{r ISSP_RT_plot}
+### RESULTS: 
+#### Figure 1: ISSP(swProb x trialtype) effect in **RT** by block type (cued vs. choice) 
+```{r Figure1}
 
 ISSP %>%
   ggplot(aes(x=swProb, y = gpmeanRT, fill = trialType)) + 
@@ -129,7 +133,6 @@ ISSP %>%
   scale_fill_grey()
 
 ```
-
 #### 3-way ANOVA: RT ~ 2 bkType x 2 swProb x 2 trialType
 ```{r}
 z = ezANOVA(data = gpCondM1
@@ -142,7 +145,6 @@ z = ezANOVA(data = gpCondM1
 print(z)
 
 ```
-
 #### 2-way ANOVA: RT ~ 2 swProb x 2 trialType [cued condition only]
 ```{r}
 z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
@@ -155,10 +157,20 @@ z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
 print(z)
 
 ```
+#### 2-way ANOVA: RT ~ 2 swProb x 2 trialType [choice condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="choice",]
+            , dv = meanRT
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
 
-#### Plot: ISSP(swProb x trialtype) effect in **accuracy** by block type (cued vs. choice) 
-
-```{r ISSP_ACC_plot}
+```
+#### Figure 2: ISSP(swProb x trialtype) effect in **accuracy** by block type (cued vs. choice) 
+```{r Figure2}
 ISSP %>%
   ggplot(aes(x=swProb, y = gpmeanACC, fill = trialType)) + 
   geom_col(position = dodge) + 
@@ -168,7 +180,6 @@ ISSP %>%
   scale_fill_grey()
 
 ```
-
 #### 3-way ANOVA: Accuracy ~ 2 bkType x 2 swProb x 2 trialType
 ```{r}
 z = ezANOVA(data = gpCondM1
@@ -181,7 +192,6 @@ z = ezANOVA(data = gpCondM1
 print(z)
 
 ```
-
 #### 2-way ANOVA: Accuracy ~ 2 swProb x 2 trialType [cued condition only]
 ```{r}
 z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
@@ -194,9 +204,20 @@ z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
 print(z)
 
 ```
+#### 2-way ANOVA: Accuracy ~ 2 swProb x 2 trialType [choice condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="choice",]
+            , dv = meanACC
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
 
-#### Plot: Voluntary task-switching rate: 2 run x 2 swProb
-```{r VTS_rate, fig.width=4.5, fig.height=4}
+```
+#### Figure 3: Voluntary task-switching rate: 2 run x 2 swProb
+```{r Figure3, fig.width=4.5, fig.height=4}
 df <- gpCondM3 
 colnames(df)[colnames(df)=="swRate"] <- "M"
 LnMSE_swRate <- getWSSE(df)
