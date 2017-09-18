@@ -1,23 +1,32 @@
     knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', echo = FALSE, warning = FALSE, message = FALSE)
 
-#### First, Set up the environment and load the data: validgpData.csv \[this file came from python scripts - cleaning and preprocessing\]
+#### First, Set up the environment and load the data: validgpData.csv
+
+This file came from python scripts - cleaning and preprocessing
 
 #### Set up some formating for the plots
 
-Set up some good format, here i am using apatheme with white background,
+Set up some good format, here I am using apatheme with white background,
 with black axis lines, no grids.
 
-#### Turn a bunch of codings into categorical factors
+#### First summarize individual subject's data
 
-#### Summarizing individual data
+#### Then, calculate the group mean and within-subject SEM using "getWSSE" (a function I wrote)
 
-#### Calculate the within-subject SEM using "getWSSE"
+    ## [1] "cued: swCost:75% = 92.03 ms"
 
-#### Plot: ISSP(swProb x trialtype) effect in **RT** by block type (cued vs. choice)
+    ## [1] "cude: swCost:25% = 109.79 ms"
 
-![](figure/ISSP_RT_plot-1.png)
+    ## [1] "choice: swCost:75% = 48.07 ms"
 
-#### 3-way ANOVA: RT ~ 2 bkType x 2 swProb x 2 trialType
+    ## [1] "choice: swCost:25% = 48.51 ms"
+
+### RESULTS:
+
+#### Figure 1: ISSP(swProb x trialtype) effect in **RT** by block type (cued vs. choice)
+
+![](figure/Figure1-1.png) \#\#\#\# 3-way ANOVA: RT ~ 2 bkType x 2 swProb
+x 2 trialType
 
     ## $ANOVA
     ##                    Effect DFn DFd          SSn        SSd           F
@@ -53,11 +62,24 @@ with black axis lines, no grids.
     ## 3     * 0.2858032837
     ## 4     * 0.0030880841
 
-#### Plot: ISSP(swProb x trialtype) effect in **accuracy** by block type (cued vs. choice)
+#### 2-way ANOVA: RT ~ 2 swProb x 2 trialType \[choice condition only\]
 
-![](figure/ISSP_ACC_plot-1.png)
+    ## $ANOVA
+    ##             Effect DFn DFd          SSn        SSd            F
+    ## 1      (Intercept)   1  43 1.015470e+08 1159976.57 3.764320e+03
+    ## 2           swProb   1  43 9.535161e+03   59368.21 6.906254e+00
+    ## 3        trialType   1  43 1.026113e+05   53331.05 8.273390e+01
+    ## 4 swProb:trialType   1  43 2.135243e+00   43924.12 2.090319e-03
+    ##              p p<.05          ges
+    ## 1 1.664537e-43     * 9.872005e-01
+    ## 2 1.186069e-02     * 7.190188e-03
+    ## 3 1.412620e-11     * 7.230164e-02
+    ## 4 9.637451e-01       1.621783e-06
 
-#### 3-way ANOVA: Accuracy ~ 2 bkType x 2 swProb x 2 trialType
+#### Figure 2: ISSP(swProb x trialtype) effect in **accuracy** by block type (cued vs. choice)
+
+![](figure/Figure2-1.png) \#\#\#\# 3-way ANOVA: Accuracy ~ 2 bkType x 2
+swProb x 2 trialType
 
     ## $ANOVA
     ##                    Effect DFn DFd          SSn        SSd            F
@@ -93,9 +115,23 @@ with black axis lines, no grids.
     ## 3 1.527130e-09     * 0.18929343
     ## 4 8.794674e-04     * 0.02032051
 
-#### Plot: Voluntary task-switching rate: 2 run x 2 swProb
+#### 2-way ANOVA: Accuracy ~ 2 swProb x 2 trialType \[choice condition only\]
 
-![](figure/VTS_rate-1.png)
+    ## $ANOVA
+    ##             Effect DFn DFd          SSn        SSd            F
+    ## 1      (Intercept)   1  43 1.479031e+02 1.19725392 5.312019e+03
+    ## 2           swProb   1  43 3.794345e-06 0.06082389 2.682446e-03
+    ## 3        trialType   1  43 7.963004e-02 0.11297053 3.030960e+01
+    ## 4 swProb:trialType   1  43 1.947658e-03 0.05530373 1.514351e+00
+    ##              p p<.05          ges
+    ## 1 1.085335e-46     * 9.904483e-01
+    ## 2 9.589340e-01       2.660167e-06
+    ## 3 1.906756e-06     * 5.287582e-02
+    ## 4 2.251657e-01       1.363620e-03
+
+#### Figure 3: Voluntary task-switching rate: 2 run x 2 swProb
+
+![](figure/Figure3-1.png)
 
 #### ANOVA: switch rate ~ 2 run x 2 swProb
 
