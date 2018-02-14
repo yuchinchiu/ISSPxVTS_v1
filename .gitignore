@@ -9,4 +9,7 @@ analysis_py/__pycache__
 .Rproj.user
 analysis_R/.Rda
 analysis_R/.Rhistory
-
+analysis_py/v1/*pkl
+analysis_py/v1/*csv
+analysis_py/v2/*pkl
+analysis_py/v2/*csv
