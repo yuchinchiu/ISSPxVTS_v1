@@ -17,6 +17,7 @@ from copy import copy
 from extractData import extractDataFromCSV
 
 workingDir = os.path.dirname(os.path.realpath(__file__))
+#%%
 os.chdir("..")
 # go up one level to the experiment directory
 
@@ -40,8 +41,8 @@ SCNT=0
 
 for f in range(0,len(fileList),1):
     SCNT=SCNT+1
-    D=np.genfromtxt(fileList[f],delimiter=',',dtype=int)
-    D=pd.DataFrame(np.transpose(np.reshape(D,(len(colNames),int(D.shape[0]/len(colNames))))),columns=colNames)
+    D = np.genfromtxt(fileList[f],delimiter=',',dtype=int)
+    D = pd.DataFrame(np.transpose(np.reshape(D,(len(colNames),int(D.shape[0]/len(colNames))))),columns=colNames)
     D['sbjId']=SCNT
     D['bkType']=1
     D.loc[D.trialType==2,'bkType']=2
@@ -58,14 +59,17 @@ for f in range(0,len(fileList),1):
     sbjInfo.index = sbjInfo.sbjId
     sbjInfo.drop('sbjId',axis=1,inplace=True)
     # figure which task subject performed based on left/right hand 
+    D.loc[D['trialType']==2, 'task']=np.nan
     D.loc[(D['trialType']==2) & (D['sbjResp']==int(SRmapping[0])),'task']=1
     D.loc[(D['trialType']==2) & (D['sbjResp']==int(SRmapping[1])),'task']=1
     D.loc[(D['trialType']==2) & (D['sbjResp']==int(SRmapping[2])),'task']=2
     D.loc[(D['trialType']==2) & (D['sbjResp']==int(SRmapping[3])),'task']=2
+    # this means that if sbjResp ==99, then the task = nan
+    
     # figure out 'correct response' based on the task inferred
     # stimCat 1-4 'large living'-'large-nonliving'-small-living,-small-nonliving
     for trial in range(0,len(D),1):
-        if D.loc[trial,'trialType']==2:
+        if D.loc[trial,'bkType']==2:
             if D.loc[trial,'task']==1:  # larger/smaller task
                 if (D.loc[trial,'stimCat']==1)|(D.loc[trial,'stimCat']==2):
                     D.loc[trial,'response']=int(SRmapping[0])
@@ -79,51 +83,60 @@ for f in range(0,len(fileList),1):
     
     # figure out switch/repeat for the voluntary 
     
-    firstTrial=np.where(D.loc[:,'trialType']==2)[0][0]  # first voluntary trial
+    firstTrial=np.where(D.loc[:,'bkType']==2)[0][0]  # first voluntary trial
     currentTask = D.loc[firstTrial,'task']
+    
     D.loc[firstTrial,'trialType'] = 1  # consider the first voluntary trial as switch
     for trial in range(firstTrial+1,len(D),1):
-        if D.loc[trial,'task']==currentTask:
-            D.loc[trial,'trialType']=0
+        if np.isnan(D.loc[trial,'task']):    # a missing trial
+            D.loc[trial,'trialType']= np.nan
         else:
-            D.loc[trial,'trialType']=1
-            currentTask=D.loc[trial,'task']
+            if D.loc[trial,'task']==currentTask:
+                D.loc[trial,'trialType']=0
+            else:
+                D.loc[trial,'trialType']=1
+                currentTask=D.loc[trial,'task']
+            
+            
     
     D.loc[(D.loc[:,'sbjResp']==D.loc[:,'response']),'sbjACC']=1
     D.loc[(D.loc[:,'sbjResp']!=D.loc[:,'response']),'sbjACC']=0
     
-    # add a new variable separating choice runs into half runs
-    choiceHalfRun = int(len(D[D['runId']==8])/2)
-    D.loc[D['runId']==8,'runId_half'] = np.concatenate((np.ones(choiceHalfRun),np.ones(choiceHalfRun)*2),axis=0)
-    D.loc[D['runId']==9,'runId_half'] = np.concatenate((np.ones(choiceHalfRun)*3,np.ones(choiceHalfRun)*4),axis=0)
-        
+    # make sure trials subj didn't respond, RT is marked as nan....
+    D.loc[D['sbjResp']==99,'sbjRT']=np.nan    
+    
+    
     gpSbjInfo = pd.concat([gpSbjInfo,sbjInfo],axis=0)
     gpData=pd.concat([gpData,D],axis=0)
 
-# convert codings to categorical variables with meaningful names
-gpData['trialType2']=copy(gpData['trialType'])  # preserve 0,1 to calcuate switch rate for VTS task
-gpData['taskNum']    = copy(gpData['task'])  # preserve 1,2 to calculate task ratio for VTS task
 
-gpData.bkType.replace(1,'cued', inplace=True)
-gpData.bkType.replace(2,'choice', inplace=True)
-gpData.trialType.replace(0,'repeat', inplace=True)
-gpData.trialType.replace(1,'switch', inplace=True)
-gpData.swProb.replace(25,'sw25%', inplace=True)
-gpData.swProb.replace(75,'sw75%', inplace=True)
-gpData.task.replace(1,'size', inplace=True)
-gpData.task.replace(2,'animacy', inplace=True)
+#%%
+# convert codings to categorical variables with meaningful names
+gpData['trialType2'] = copy(gpData['trialType'])  # preserve 0,1 to calcuate switch rate for VTS task
+gpData['taskNum']    = copy(gpData['task'])  # preserve 1,2 to calculate task ratio for VTS task
+gpData.taskNum = gpData.taskNum-1 # become 0 and 1 
+
+gpData.bkType    = gpData.bkType.map({1:'cued', 2:'choice'})
+gpData.trialType = gpData.trialType.map({0:'repeat',1:'switch'})
+gpData.swProb    = gpData.swProb.map({25:'sw25%',75:'sw75%'})
+gpData.task      = gpData.task.map({1:'size', 2:'animacy'})
+
 
 gpData['bkType']   = pd.Categorical(gpData.bkType, categories=['cued','choice'],ordered=True)
 gpData['swProb']   = pd.Categorical(gpData.swProb, categories=['sw25%','sw75%'],ordered=True)
 gpData['trialType']= pd.Categorical(gpData.trialType, categories=['repeat','switch'],ordered=True)
+gpData['task']     = pd.Categorical(gpData.task, categories=['size','animacy'],ordered=True)
 
 # output DataFrame
 os.chdir(workingDir)  # scripts directory
-gpData.to_pickle('gpData_v2.pkl')
-gpSbjInfo.to_pickle('gpSbjInfo_v2.pkl')
 
-gpData.to_csv('gpData_v2.csv',encoding='utf-8', index=False)
-gpSbjInfo.to_csv('gpSbjInfo_v2.csv',encoding='utf-8', index=False)
+
+gpData.to_pickle('gpData.pkl')
+gpSbjInfo.to_pickle('gpSbjInfo.pkl')
+
+
+gpData.to_csv('gpData.csv',encoding='utf-8', index=False)
+gpSbjInfo.to_csv('gpSbjInfo.csv',encoding='utf-8', index=False)
 
 
 print(SCNT)
