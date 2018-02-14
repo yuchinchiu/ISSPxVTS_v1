@@ -1,0 +1,343 @@
+---
+title: "ISSPxVTS_v1 analysis - V2 [addressing Kerstin's comments]"
+author: "Yu-Chin Chiu"
+date: "October 6, 2017"
+output: md_document
+---
+
+```{r knitSetup}
+knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.path='figure/', echo = FALSE, warning = FALSE, message = FALSE)
+
+```
+
+#### First, Set up the environment and load the data: validgpData.csv 
+This file came from python scripts - cleaning and preprocessing
+
+```{r setup}
+rm(list=ls())
+library('tidyverse')
+library('ez')
+
+currentDir <- getwd()
+dataDir <- "C:/Users/yc180/Documents/YCCProjects/ISSPxVTS_v1/"
+setwd(dataDir)
+
+#gpData=read_csv('gpData_v2.csv',col_names=TRUE) # all subjects data, none excluded
+
+#gpData = read_csv('validgpData_v1.csv',col_names=TRUE) # good subjects data, N=44
+gpData = read_csv('invalidgpData_v1.csv',col_names=TRUE) # good subjects data, N=25
+
+setwd(currentDir)
+source("getWSSE.R")
+
+```
+#### Set up some formating for the plots
+Set up some good format, here I am using apatheme with white background, with black axis lines, no grids.
+```{r fig apa-format}
+apatheme = theme_bw()+
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        axis.line=element_line())
+dodge = position_dodge(width=0.9)
+```
+
+```{r analysis_prep}
+# Turn a bunch of codings into categorical factors
+catVblList <- c("bkType", "task", "swProb", "trialType", "runId", "runId_half","sbjId")
+idx <- match(catVblList, colnames(gpData))
+for (c in idx[!is.na(idx)]){
+  gpData[[c]] <- factor(gpData[[c]], ordered = TRUE)
+}
+gpData$bkType <- factor(gpData$bkType, levels = c("cued", "choice"), ordered=TRUE)
+gpData[gpData$sbjACC==0, "sbjRT"] <- NA
+NrS <- length(unique(gpData$sbjId))
+
+```
+#### First summarize individual subject's data
+
+```{r within-Subject analysis}
+gpCondM1 <- tibble()
+gpCondM2 <- tibble()
+gpCondM3 <- tibble()
+gpCondM4 <- tibble()
+gpCondM5 <- tibble()
+gpData$taskNum = gpData$taskNum-1
+
+for (S in unique(gpData$sbjId)) {
+  mydata <-  gpData %>% filter(sbjId==S) 
+  
+  # 2 bkType (cued, choice) x 2 swProb (25%, 75%) x 2 trial type (switch, repeat)
+  condM <- mydata %>%
+    group_by(bkType, swProb, trialType) %>% 
+    summarise(meanRT = mean(sbjRT, na.rm = TRUE), meanACC = mean(sbjACC))
+  condM <- bind_cols(tibble(sbjId = rep(S,dim(condM)[1])), condM)
+  ISSP <- condM[2,"meanRT"] - condM[1,"meanRT"] - (condM[4,"meanRT"]-condM[3,"meanRT"])
+  ISSP_choice <- condM[6,"meanRT"] - condM[5,"meanRT"] - (condM[8,"meanRT"]-condM[7,"meanRT"])
+  gpCondM1 <- bind_rows(gpCondM1, condM)
+  
+  
+  # choice: switch Rate as a function of swProb
+  condM2 <- mydata %>% 
+    filter(bkType=="choice") %>%
+    group_by(swProb) %>%
+    summarise(swRate = mean(trialType2, na.rm = TRUE), tskRatio = mean(taskNum))
+  condM2 <- bind_cols(tibble(sbjId = rep(S,dim(condM2)[1])), condM2)
+  gpCondM2 <- bind_rows(gpCondM2, condM2)
+  
+  # choice: 2 runs 
+  condM3 <- mydata %>% 
+    filter(bkType=="choice") %>%
+    group_by(runId, swProb) %>%
+    summarise(swRate = mean(trialType2, na.rm = TRUE), tskRatio = mean(taskNum))
+  condM3 <- bind_cols(tibble(sbjId = rep(S,dim(condM3)[1])), condM3)
+  gpCondM3 <- bind_rows(gpCondM3, condM3)
+  
+  #choice: 4 runs
+  condM4 <- mydata %>%
+    filter(bkType=="choice") %>%
+    group_by(runId_half, swProb) %>%
+    summarise(swRate = mean(trialType2, na.rm=TRUE), tskRatio = mean(taskNum))
+  condM4 <- bind_cols(tibble(sbjId = rep(S,dim(condM4)[1])), condM4)
+  gpCondM4 <- bind_rows(gpCondM4, condM4)
+    
+  
+  # task biases
+  condM5 <- mydata %>%
+    group_by(bkType, swProb) %>% 
+    summarise(tskRatio = mean(taskNum))
+  condM5 <- bind_cols(tibble(sbjId = rep(S,dim(condM5)[1])), condM5)
+  gpCondM5 <- bind_rows(gpCondM5, condM5)
+
+
+
+  
+
+}
+
+```
+#### Then, calculate the group mean and within-subject SEM using "getWSSE" (a function I wrote)
+```{r ISSP analysis}
+
+df <- gpCondM1 %>% select(-meanACC)
+colnames(df)[colnames(df)=="meanRT"] <- "M"
+LnMSE_rt <- getWSSE(df)
+
+
+df <- gpCondM1 %>% select(-meanRT)
+colnames(df)[colnames(df)=="meanACC"] <- "M"
+LnMSE_acc <- getWSSE(df)
+
+
+ISSP <- gpCondM1 %>%
+  group_by(bkType, swProb, trialType) %>% 
+  summarise(gpmeanRT = mean(meanRT), SE_rt = LnMSE_rt , gpmeanACC = mean(meanACC)*100, SE_acc = LnMSE_acc*100) 
+
+swCost_75 = ISSP[4,"gpmeanRT"]-ISSP[3,"gpmeanRT"]
+swCost_25 = ISSP[2,"gpmeanRT"]-ISSP[1,"gpmeanRT"]
+
+print('Group means:')
+
+print(paste("cued: swCost:75% =", sprintf("%.2f", swCost_75), "ms"))
+print(paste("cued: swCost:25% =", sprintf("%.2f", swCost_25), "ms"))
+
+VTSswCost_75 = ISSP[8,"gpmeanRT"]-ISSP[7,"gpmeanRT"]
+VTSswCost_25 = ISSP[6,"gpmeanRT"]-ISSP[5,"gpmeanRT"]
+
+print(paste("choice: swCost:75% =", sprintf("%.2f", VTSswCost_75), "ms"))
+print(paste("choice: swCost:25% =", sprintf("%.2f", VTSswCost_25), "ms"))
+
+
+```
+### RESULTS: 
+#### Figure 1: ISSP(swProb x trialtype) effect in **RT** by block type (cued vs. choice) 
+```{r Figure1}
+
+ISSP %>%
+  ggplot(aes(x=swProb, y = gpmeanRT, fill = trialType)) + 
+  geom_col(position = dodge) + 
+  geom_errorbar(aes(ymax = gpmeanRT + (1*SE_rt), ymin =gpmeanRT -(1*SE_rt)), position = dodge, width=.25) + facet_grid(.~bkType) + 
+  ylab("mean RT (correct trials)") + 
+  coord_cartesian(ylim = c(600,900)) +
+  scale_fill_grey()
+
+```
+
+#### 3-way ANOVA: RT ~ 2 bkType x 2 swProb x 2 trialType
+
+```{r}
+z = ezANOVA(data = gpCondM1
+            , dv = meanRT
+            , wid = sbjId
+            , within = .(bkType, swProb, trialType)
+            , within_full = .(bkType, swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+#### 2-way ANOVA: RT ~ 2 swProb x 2 trialType [cued condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
+            , dv = meanRT
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+#### 2-way ANOVA: RT ~ 2 swProb x 2 trialType [choice condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="choice",]
+            , dv = meanRT
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+#### Figure 2: ISSP(swProb x trialtype) effect in **accuracy** by block type (cued vs. choice) 
+```{r Figure2}
+ISSP %>%
+  ggplot(aes(x=swProb, y = gpmeanACC, fill = trialType)) + 
+  geom_col(position = dodge) + 
+  geom_errorbar(aes(ymax = gpmeanACC + (1*SE_acc), ymin =gpmeanACC -(1*SE_acc)), position = dodge, width=.25) + facet_grid(.~bkType) + 
+  ylab("mean ACC") + 
+  coord_cartesian(ylim = c(80,100)) +
+  scale_fill_grey()
+
+```
+
+#### 3-way ANOVA: Accuracy ~ 2 bkType x 2 swProb x 2 trialType
+```{r}
+z = ezANOVA(data = gpCondM1
+            , dv = meanACC
+            , wid = sbjId
+            , within = .(bkType, swProb, trialType)
+            , within_full = .(bkType, swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+#### 2-way ANOVA: Accuracy ~ 2 swProb x 2 trialType [cued condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="cued",]
+            , dv = meanACC
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+#### 2-way ANOVA: Accuracy ~ 2 swProb x 2 trialType [choice condition only]
+```{r}
+z = ezANOVA(data = gpCondM1[gpCondM1$bkType=="choice",]
+            , dv = meanACC
+            , wid = sbjId
+            , within = .(swProb, trialType)
+            , within_full = .(swProb, trialType)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+```
+
+#### Figure 3: Voluntary task-switching rate: 2 run x 2 swProb
+```{r Figure3, fig.width=4.5, fig.height=4}
+df <- gpCondM3 %>% select(-tskRatio)
+colnames(df)[colnames(df)=="swRate"] <- "M"
+LnMSE_swRate <- getWSSE(df)
+
+RunXSwRate <- gpCondM3 %>%
+  group_by(runId, swProb) %>% 
+  summarise(gpmeanSwRate = mean(swRate), SE_rate = LnMSE_swRate) 
+
+RunXSwRate  %>%
+  ggplot(aes(x=runId, y = gpmeanSwRate*100, fill = swProb)) + 
+  geom_col(position = dodge) + 
+  geom_errorbar(aes(ymax = gpmeanSwRate*100 + (1*SE_rate*100), ymin =gpmeanSwRate*100 -(1*SE_rate*100)), 
+                position = dodge, width=.25) + 
+  ylab("mean Switch Rate(%)") + 
+  coord_cartesian(ylim = c(30,50)) +
+  scale_fill_grey()
+
+
+```
+
+
+#### ANOVA: switch rate ~ 2 run x 2 swProb
+
+```{r}
+z = ezANOVA(data = gpCondM3
+            , dv = swRate
+            , wid = sbjId
+            , within = .(runId, swProb)
+            , within_full = .(runId, swProb)
+            , type = 3
+            , detailed = TRUE)
+print(z)
+
+y1 <- gpCondM3 %>% filter(runId=="9") %>% filter(swProb=="sw25%") %>% select(swRate)
+y2 <- gpCondM3 %>% filter(runId=="9") %>% filter(swProb=="sw75%") %>% select(swRate)
+
+paired_t_pval <-gpCondM3 %>% filter(runId=="9") %>% summarise(pval_ttest = t.test(swRate~swProb, data=., paired = TRUE)$p.value)
+
+print(paired_t_pval)
+
+
+```
+
+## Additional analyses 
+
+#### Figure 4: Voluntary task-switching rate: 4 run x 2 swProb
+```{r Figure4, fig.width=4.5, fig.height=4}
+df <- gpCondM4 %>% select(-tskRatio)
+colnames(df)[colnames(df)=="swRate"] <- "M"
+LnMSE_swRate <- getWSSE(df)
+
+RunXSwRate <- gpCondM4 %>%
+  group_by(runId_half, swProb) %>% 
+  summarise(gpmeanSwRate = mean(swRate), SE_rate = LnMSE_swRate) 
+
+RunXSwRate  %>%
+  ggplot(aes(x=factor(runId_half, labels=c("8.1","8.2","9.1","9.2")), y = gpmeanSwRate*100, fill = swProb)) + 
+  geom_col(position = dodge) + 
+  geom_errorbar(aes(ymax = gpmeanSwRate*100 + (1*SE_rate*100), ymin =gpmeanSwRate*100 -(1*SE_rate*100)), 
+                position = dodge, width=.25) + 
+  xlab("run_half") + 
+  ylab("mean Switch Rate(%)") + 
+  coord_cartesian(ylim = c(30,50)) +
+  scale_fill_grey()
+
+```
+#### Figure 5:Task Ratio: 2 run x 2 swProb
+
+```{r Figure5, fig.width=4.5, fig.height=4}
+
+df <- gpCondM5 
+colnames(df)[colnames(df)=="tskRatio"] <- "M"
+LnMSE_tRatio <- getWSSE(df)
+
+bkTypeXtskRatio <- gpCondM5 %>%
+  group_by(bkType, swProb) %>% 
+  summarise(gpmeanTratio = mean(tskRatio), SE_rate = LnMSE_tRatio) 
+
+bkTypeXtskRatio  %>%
+  ggplot(aes(x=bkType, y = gpmeanTratio*100, fill = swProb)) + 
+  geom_col(position = dodge) + 
+  geom_errorbar(aes(ymax = gpmeanTratio*100 + (1*SE_rate*100), ymin =gpmeanTratio*100 -(1*SE_rate*100)), 
+                position = dodge, width=.25) + 
+  xlab("bkType") + 
+  ylab("% of Task 1") + 
+  coord_cartesian(ylim = c(40,60)) +
+  scale_fill_grey()
+
+```
+
